@@ -1,0 +1,21 @@
+# 隐私红线：录像带（聊天记录/提示词全文）绝不进仓库
+logs/
+logs/**/*.txt
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# 编辑器/系统
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# 临时文件
+temp/
+*.tmp
