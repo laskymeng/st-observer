@@ -35,7 +35,7 @@
 
 ## 快速开始（3 步）
 
-> 要求：SillyTavern + [酒馆助手](https://github.com/…/Tavern-Helper) 扩展（4.8.2+）、Python 3、端口 6701 空闲。
+> 要求：SillyTavern + **酒馆助手**（Tavern Helper）扩展（4.8.2+）、Python 3、端口 6701 空闲。
 
 1. **装摄像头**：酒馆 → 扩展 → 酒馆助手 → 脚本库（全局）→ 导入 `酒馆观测台_脚本包.json` → 打开脚本开关。
 2. **开电话亭**：双击 `启动电话亭.bat`（黑窗口保持开着 = 正在录像）。
@@ -45,7 +45,7 @@
 
 ## 配套 skill（让 AI 自动学会复盘）
 
-仓库内 `skills/st-observer-review/` 是一张 [Pi](https://github.com/…)/agent 技能卡：AI 听到"看看记录 / 观测台 / 录像带"等触发词就自动读取日志、按五路框架复盘。
+仓库内 `skills/st-observer-review/` 是一张 AI agent 技能卡（面向 Pi / Claude Code 等 agent 系统）：AI 听到"看看记录 / 观测台 / 录像带"等触发词就自动读取日志、按五路框架复盘。
 
 安装：
 
