@@ -73,7 +73,7 @@
 `logs/observe.log` 每行一条 JSON：
 
 ```json
-{"ts": "2026-09-25 13:56:52.123", "kind": "event", "event": "收到AI消息", "message_id": 31, "char": "鬼作物语V6", "chat_id": "…"}
+{"ts": "2026-09-25 13:56:52.123", "kind": "event", "event": "收到AI消息", "message_id": 31, "char": "物语V6", "chat_id": "…"}
 {"ts": "…", "kind": "prompt", "event": "chat_completion_prompt_ready", "file": "logs/prompts/1790315814257_e2zqvf.txt", "chars": 83888}
 {"ts": "…", "kind": "worldinfo", "entries": [{"name": "服装描写强化"}, {"name": "瑞秋"}]}
 {"ts": "…", "kind": "snapshot", "vars": {"chat": "…", "message": "…", "character": "…", "global": "…"}}
