@@ -11,26 +11,27 @@
 三个组件，各管一事：
 
 ```
-┌─────────────┐    POST      ┌──────────────┐    write    ┌──────────────┐
-│  observer.js │ ───────────▶ │ phonebooth.py│ ──────────▶ │  logs/        │
-│  摄像头       │  127.0.0.1:6701 │ 电话亭        │             │  录像带       │
-│ (酒馆脚本库)  │              │ (本地接收器)  │             │ observe.log   │
-└─────────────┘              └──────────────┘             │ prompts/*.txt │
-                                                          └──────────────┘
+┌─────────────┐    POST      ┌──────────────┐    write    ┌──────────────────────┐
+│  observer.js │ ───────────▶ │ phonebooth.py│ ──────────▶ │  logs/                │
+│  摄像头       │  127.0.0.1:6701 │ 电话亭        │             │  observe_<卡名>.log  │
+│ (酒馆脚本库)  │              │ (本地接收器)  │             │  prompts/<卡名>/     │
+└─────────────┘              └──────────────┘             └──────────────────────┘
 ```
 
 - **摄像头** `observer.js`：装在酒馆助手脚本库，纯只读旁观，从不发起生成、不改数据。
-- **电话亭** `phonebooth.py`：本地 HTTP 接收器（`127.0.0.1:6701`），把摄像头发来的记录落盘。
-- **录像带** `logs/`：所有记录的存放处（`observe.log` 每行一条 JSON，`prompts/` 存每次生成的提示词全文）。
+- **电话亭** `phonebooth.py`：本地 HTTP 接收器（`127.0.0.1:6701`），把摄像头发来的记录按角色卡分文件落盘。
+- **录像带** `logs/`：按角色卡分目录存储
+  - `observe_<卡名>.log` —— 该卡所有事件（JSONL，一行一条完整事件）
+  - `prompts/<卡名>/YYYY-MM-DD_HH-mm-ss_序号.txt` —— 该卡的提示词全文快照，按时间命名
 
 ## 观测五路
 
 | 路 | 内容 |
 |---|---|
-| ① 事件 | 消息收发（含 message_id 序列）、生成开始/结束/中止、删除/编辑 |
-| ② 提示词 | 每次 AI 生成前的**提示词全文快照**（含角色卡设定、世界书注入、对话历史） |
-| ③ 世界书 | 每次世界书点亮时的条目名（解决"点亮名单全是 ?"的排查痛点） |
-| ④ 变量 | MVU 变量定时快照（默认 15s，可调），含聊天/消息/角色/全局四级 |
+| ① 事件 | 消息收发（含 message_id 序列）、生成开始/结束/中止、删除/编辑、滑动回复、切换聊天 |
+| ② 提示词 | 每次 AI 生成前的**提示词全文快照**（含角色卡设定、世界书注入、对话历史），text completion 与 chat completion 双模式均覆盖 |
+| ③ 世界书 | 每次世界书点亮时的完整条目（name、comment、keys、enabled、order、priority、id） |
+| ④ 变量 | MVU 变量变化驱动快照（仅 character+global 层去重），含聊天/消息/角色/全局四级，合法 JSON、无空转心跳 |
 | ⑤ 报错 | 前端错误 / Promise 拒绝 / 事件断链 |
 
 ## 快速开始（3 步）
@@ -59,7 +60,7 @@
 | 项 | 位置 | 默认 |
 |---|---|---|
 | 电话亭端口 | `phonebooth.py` 顶部 `PORT` | `6701` |
-| 变量快照间隔 | `observer.js` 顶部 `SNAPSHOT_INTERVAL_MS` | `15000` |
+| 变量快照变化检测 | `observer.js` `deepEqual` 仅对 character+global | 开启 |
 | Python 路径 | `启动电话亭.bat` 顶部注释 | 自动探测 `py`/`python`，可改自定义路径 |
 
 ## 隐私与安全
@@ -68,26 +69,38 @@
 - 所有通信都在本机回环（`127.0.0.1`），**零外联**。
 - 摄像头只监听酒馆事件，从不发起生成：**零额外 AI 算力/API 消耗**。
 
-## 开发者：记录格式
+## 开发者：记录格式（Schema v2）
 
-`logs/observe.log` 每行一条 JSON：
-
+所有事件统一字段：
 ```json
-{"ts": "2026-09-25 13:56:52.123", "kind": "event", "event": "收到AI消息", "message_id": 31, "char": "物语V6", "chat_id": "…"}
-{"ts": "…", "kind": "prompt", "event": "chat_completion_prompt_ready", "file": "logs/prompts/1790315814257_e2zqvf.txt", "chars": 83888}
-{"ts": "…", "kind": "worldinfo", "entries": [{"name": "服装描写强化"}, {"name": "瑞秋"}]}
-{"ts": "…", "kind": "snapshot", "vars": {"chat": "…", "message": "…", "character": "…", "global": "…"}}
-{"ts": "…", "kind": "error", "message": "…"}
+{
+  "_schema": "st-observer/v2",
+  "_ts": 1727342212123,
+  "kind": "event|variable_snapshot|worldbook_lit|prompt_snapshot|error",
+  "chat_id": "卡名 - 2026-09-27@10h00m00s000ms",
+  "char_name": "角色名"
+}
 ```
 
-`kind` 取值：`event` / `prompt` / `worldinfo` / `snapshot` / `error`。
+`logs/observe_<卡名>.log` 每行一条 JSONL 示例：
 
-监听的事件（酒馆事件名）：
+```json
+{"_schema":"st-observer/v2","_ts":1727342212123,"kind":"event","event":"收到AI消息","message_id":31,"type":"normal","chat_id":"<卡名> - 2026-09-27@10h00m00s000ms","char_name":"<角色名>"}
+{"_schema":"st-observer/v2","_ts":1727342212123,"kind":"prompt_snapshot","content":"【system】...【user】...","dry_run":false,"chat_id":"...","char_name":"..."}
+{"_schema":"st-observer/v2","_ts":1727342212123,"kind":"worldbook_lit","entries":[{"name":"<条目名>","comment":"<备注>","keys":["关键词1"],"enabled":true,"order":10,"priority":50,"id":1}],"chat_id":"..."}
+{"_schema":"st-observer/v2","_ts":1727342212123,"kind":"variable_snapshot","variables":{"chat":{},"message":{},"character":{},"global":{}},"reason":"收到消息后","chat_id":"..."}
+{"_schema":"st-observer/v2","_ts":1727342212123,"kind":"error","message":"...","source":"...","line":123}
+```
 
-- `message_sent` / `message_received` / `message_deleted`
-- `GENERATION_STARTED` / `GENERATION_ENDED` / `GENERATION_STOPPED` / `GENERATION_AFTER_COMMANDS`
-- `GENERATE_AFTER_COMBINE_PROMPTS`（text completion 提示词） / `CHAT_COMPLETION_PROMPT_READY`（chat completion 提示词）
-- `WORLD_INFO_ACTIVATED` / `APP_READY` 等
+`kind` 取值：`event` / `variable_snapshot` / `worldbook_lit` / `prompt_snapshot` / `error` / `prompt_snapshot_ref`。
+
+监听的酒馆事件（酒馆事件名）：
+
+- `message_sent` / `message_received` / `message_deleted` / `message_updated` / `message_swiped`
+- `generation_started` / `generation_ended` / `generation_stopped` / `chat_changed`
+- `generate_after_combine_prompts`（text completion 提示词） / `chat_completion_prompt_ready`（chat completion 提示词）
+- `world_info_activated` / `variable_updated` / `variable_changed`
+- `APP_READY` 等
 
 ## 已知现象（非 bug）
 
@@ -97,7 +110,7 @@
 
 ## 许可
 
-[MIT](LICENSE) © 2026 见 LICENSE 文件。
+[MIT](LICENSE) © 2026 laskymeng
 
 ---
 
